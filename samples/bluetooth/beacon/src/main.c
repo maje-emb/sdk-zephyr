@@ -14,6 +14,10 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 
+#include "net_core_monitor.h"
+#include <helpers/nrfx_reset_reason.h>
+#include <zephyr/sys/reboot.h>
+
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
@@ -74,6 +78,31 @@ static void bt_ready(int err)
 	printk("Beacon started, advertising as %s\n", addr_s);
 }
 
+/* This is the override for the __weak handler. */
+void ncm_net_core_event_handler(enum ncm_event_type event, uint32_t reset_reas)
+{
+	switch (event) {
+	case NCM_EVT_NET_CORE_RESET:
+		printk("The network core reset\n");
+		if (reset_reas & NRF_RESET_RESETREAS_RESETPIN_MASK) {
+			printk("Reset by pin-reset\n");
+		} else if (reset_reas & NRF_RESET_RESETREAS_DOG0_MASK) {
+			printk("Reset by application watchdog timer 0\n");
+		} else if (reset_reas & NRF_RESET_RESETREAS_SREQ_MASK) {
+			printk("Reset by soft-reset\n");
+		} else if (reset_reas) {
+			printk("Reset by a different source (0x%08X)\n", reset_reas);
+			printk("SoC reboot cold in 5 seconds\n");
+			k_sleep(K_SECONDS(5));
+			sys_reboot(SYS_REBOOT_COLD);
+		}
+		break;
+	case NCM_EVT_NET_CORE_FREEZE:
+		printk("The network core is not responding.\n");
+		break;
+	}
+}
+
 int main(void)
 {
 	int err;
@@ -85,5 +114,6 @@ int main(void)
 	if (err) {
 		printk("Bluetooth init failed (err %d)\n", err);
 	}
+
 	return 0;
 }

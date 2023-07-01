@@ -373,6 +373,15 @@ static struct ipc_ept_cfg hci_ept_cfg = {
 	},
 };
 
+static void reset_work_handler(struct k_work *work);
+K_WORK_DELAYABLE_DEFINE(reset_work, reset_work_handler);
+
+static void reset_work_handler(struct k_work *work)
+{
+	k_oops();
+//	NVIC_SystemReset();
+}
+
 int main(void)
 {
 	int err;
@@ -407,6 +416,8 @@ int main(void)
 	}
 
 	k_sem_take(&ipc_bound_sem, K_FOREVER);
+
+	k_work_schedule(&reset_work, K_SECONDS(5));
 
 	while (1) {
 		struct net_buf *buf;
