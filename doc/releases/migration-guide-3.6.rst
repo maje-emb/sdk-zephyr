@@ -55,6 +55,104 @@ Device Drivers and Device Tree
 
   (:github:`62994`)
 
+* Various deprecated macros related to the deprecated devicetree label property
+  were removed. These are listed in the following table. The table also
+  provides replacements.
+
+  However, if you are still using code like
+  ``device_get_binding(DT_LABEL(node_id))``, consider replacing it with
+  something like ``DEVICE_DT_GET(node_id)`` instead. The ``DEVICE_DT_GET()``
+  macro avoids run-time string comparisons, and is also safer because it will
+  fail the build if the device does not exist.
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Removed macro
+       - Replacement
+
+     * - ``DT_GPIO_LABEL(node_id, gpio_pha)``
+       - ``DT_PROP(DT_GPIO_CTLR(node_id, gpio_pha), label)``
+
+     * - ``DT_GPIO_LABEL_BY_IDX(node_id, gpio_pha, idx)``
+       - ``DT_PROP(DT_GPIO_CTLR_BY_IDX(node_id, gpio_pha, idx), label)``
+
+     * - ``DT_INST_GPIO_LABEL(inst, gpio_pha)``
+       - ``DT_PROP(DT_GPIO_CTLR(DT_DRV_INST(inst), gpio_pha), label)``
+
+     * - ``DT_INST_GPIO_LABEL_BY_IDX(inst, gpio_pha, idx)``
+       - ``DT_PROP(DT_GPIO_CTLR_BY_IDX(DT_DRV_INST(inst), gpio_pha, idx), label)``
+
+     * - ``DT_SPI_DEV_CS_GPIOS_LABEL(spi_dev)``
+       - ``DT_PROP(DT_SPI_DEV_CS_GPIOS_CTLR(spi_dev), label)``
+
+     * - ``DT_INST_SPI_DEV_CS_GPIOS_LABEL(inst)``
+       - ``DT_PROP(DT_SPI_DEV_CS_GPIOS_CTLR(DT_DRV_INST(inst)), label)``
+
+     * - ``DT_LABEL(node_id)``
+       - ``DT_PROP(node_id, label)``
+
+     * - ``DT_BUS_LABEL(node_id)``
+       - ``DT_PROP(DT_BUS(node_id), label)``
+
+     * - ``DT_INST_LABEL(inst)``
+       - ``DT_INST_PROP(inst, label)``
+
+     * - ``DT_INST_BUS_LABEL(inst)``
+       - ``DT_PROP(DT_BUS(DT_DRV_INST(inst)), label)``
+
+* The :dtcompatible:`st,stm32-lptim` lptim which is selected for counting ticks during
+  low power modes is identified by **stm32_lp_tick_source** in the device tree as follows.
+  The stm32_lptim_timer driver has been changed to support this.
+
+  .. code-block:: devicetree
+
+    stm32_lp_tick_source: &lptim1 {
+            status = "okay";
+    };
+
+* The native Linux SocketCAN driver, which can now be used in both :ref:`native_posix<native_posix>`
+  and :ref:`native_sim<native_sim>` with or without an embedded C-library, has been renamed to
+  reflect this:
+
+  * The devicetree compatible was renamed from ``zephyr,native-posix-linux-can`` to
+    :dtcompatible:`zephyr,native-linux-can`.
+  * The main Kconfig option was renamed from ``CONFIG_CAN_NATIVE_POSIX_LINUX`` to
+    :kconfig:option:`CONFIG_CAN_NATIVE_LINUX`.
+
+* The io-channel cells of the following devicetree bindings were reduced from 2 (``positive`` and
+  ``negative``) to the common ``input``, making it possible to use the various ADC DT macros with TI
+  LMP90xxx ADC devices:
+
+  * :dtcompatible:`ti,lmp90077`
+  * :dtcompatible:`ti,lmp90078`
+  * :dtcompatible:`ti,lmp90079`
+  * :dtcompatible:`ti,lmp90080`
+  * :dtcompatible:`ti,lmp90097`
+  * :dtcompatible:`ti,lmp90098`
+  * :dtcompatible:`ti,lmp90099`
+  * :dtcompatible:`ti,lmp90100`
+
+* The io-channel cells of the :dtcompatible:`microchip,mcp3204` and
+  :dtcompatible:`microchip,mcp3208` devicetree bindings were renamed from ``channel`` to the common
+  ``input``, making it possible to use the various ADC DT macros with Microchip MCP320x ADC devices.
+
+* The :dtcompatible:`st,stm32h7-fdcan` CAN controller driver now supports configuring the
+  domain/kernel clock via devicetree. Previously, the driver only supported using the PLL1_Q clock
+  for kernel clock, but now it defaults to the HSE clock, which is the chip default. Boards that
+  use the PLL1_Q clock for FDCAN will need to override the ``clocks`` property as follows:
+
+  .. code-block:: devicetree
+
+    &fdcan1 {
+            clocks = <&rcc STM32_CLOCK_BUS_APB1_2 0x00000100>,
+                     <&rcc STM32_SRC_PLL1_Q FDCAN_SEL(1)>;
+    };
+
+* Runtime configuration is now disabled by default for Nordic UART drivers. The motivation for the
+  change is that this feature is rarely used and disabling it significantly reduces the memory
+  footprint.
+
 Power Management
 ================
 
