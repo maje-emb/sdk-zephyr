@@ -16,23 +16,14 @@
  */
 #define _ISR_OFFSET 0
 
-#if defined(CONFIG_SOC_SERIES_NRF51X) || defined(CONFIG_SOC_SERIES_NRF52X)
-/* The customized solution for nRF51X-based and nRF52X-based
- * platforms requires that the POWER_CLOCK_IRQn line equals 0.
- */
-BUILD_ASSERT(POWER_CLOCK_IRQn == 0,
-	"POWER_CLOCK_IRQn != 0. Consider rework manual vector table.");
-
-/* The customized solution for nRF51X-based and nRF52X-based
- * platforms requires that the RTC1 IRQ line equals 17.
- */
-BUILD_ASSERT(RTC1_IRQn == 17,
-	     "RTC1_IRQn != 17. Consider rework manual vector table.");
-
+#if defined(CONFIG_SOC_FAMILY_NRF)
 #undef _ISR_OFFSET
+#if defined(CONFIG_SOC_SERIES_NRF51X) || defined(CONFIG_SOC_SERIES_NRF52X) || \
+	defined(CONFIG_SOC_SERIES_NRF53X) || defined(CONFIG_SOC_SERIES_NRF91X)
+
 #if !defined(CONFIG_BOARD_QEMU_CORTEX_M0)
 /* Interrupt line 0 is used by POWER_CLOCK */
-#define _ISR_OFFSET 1
+#define _ISR_OFFSET TIMER0_IRQn
 #else
 /* The customized solution for nRF51-based QEMU Cortex-M0 platform
  * requires that the TIMER0 IRQ line equals 8.
@@ -43,39 +34,12 @@ BUILD_ASSERT(TIMER0_IRQn == 8,
  * in QEMU Cortex M0.
  */
 #define _ISR_OFFSET 9
-
 #endif
 
-#elif defined(CONFIG_SOC_SERIES_NRF53X) || defined(CONFIG_SOC_SERIES_NRF91X)
-/* The customized solution for nRF91X-based and nRF53X-based
- * platforms requires that the POWER_CLOCK_IRQn line equals 5.
- */
-BUILD_ASSERT(CLOCK_POWER_IRQn == 5,
-	     "POWER_CLOCK_IRQn != 5."
-	     "Consider rework manual vector table.");
-
-#if !defined(CONFIG_SOC_NRF5340_CPUNET)
-/* The customized solution for nRF91X-based platforms
- * requires that the RTC1 IRQ line equals 21.
- */
-BUILD_ASSERT(RTC1_IRQn == 21,
-	     "RTC1_IRQn != 21. Consider rework manual vector table.");
-
-#else /* CONFIG_SOC_NRF5340_CPUNET */
-/* The customized solution for nRF5340_CPUNET
- * requires that the RTC1 IRQ line equals 22.
- */
-BUILD_ASSERT(RTC1_IRQn == 22,
-	     "RTC1_IRQn != 22. Consider rework manual vector table.");
-#endif
-#undef _ISR_OFFSET
-/* Interrupt lines 8-10 is the first set of consecutive interrupts implemented
- * in nRF9160 SOC.
- */
-#define _ISR_OFFSET 8
-
-#endif /* CONFIG_SOC_SERIES_NRF52X */
-
+#elif defined(CONFIG_SOC_SERIES_NRF54LX)
+#define _ISR_OFFSET 28
+#endif /* CONFIG_SOC_SERIES_NRF54LX */
+#endif /* CONFIG_SOC_FAMILY_NRF */
 
 struct k_sem sem[3];
 
@@ -182,40 +146,41 @@ typedef void (*vth)(void); /* Vector Table Handler */
  *
  * Note: qemu_cortex_m0 uses TIMER0 to implement system timer.
  */
-void rtc_nrf_isr(void);
 void nrfx_power_clock_irq_handler(void);
 #if defined(CONFIG_SOC_SERIES_NRF51X) || defined(CONFIG_SOC_SERIES_NRF52X)
+#define POWER_CLOCK_IRQ_NUM	POWER_CLOCK_IRQn
 #if defined(CONFIG_BOARD_QEMU_CORTEX_M0)
 void timer0_nrf_isr(void);
-vth __irq_vector_table _irq_vector_table[] = {
-	nrfx_power_clock_irq_handler, 0, 0, 0, 0, 0, 0, 0,
-	timer0_nrf_isr, isr0, isr1, isr2
-};
+#define TIMER_IRQ_HANDLER	timer0_nrf_isr
+#define TIMER_IRQ_NUM	TIMER0_IRQn
 #else
-vth __irq_vector_table _irq_vector_table[] = {
-	nrfx_power_clock_irq_handler,
-	isr0, isr1, isr2,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	rtc_nrf_isr
-};
+void rtc_nrf_isr(void);
+#define TIMER_IRQ_HANDLER	rtc_nrf_isr
+#define TIMER_IRQ_NUM	RTC1_IRQn
 #endif /* CONFIG_BOARD_QEMU_CORTEX_M0 */
 #elif defined(CONFIG_SOC_SERIES_NRF53X) || defined(CONFIG_SOC_SERIES_NRF91X)
-#ifndef CONFIG_SOC_NRF5340_CPUNET
-vth __irq_vector_table _irq_vector_table[] = {
-	0, 0, 0, 0, 0, nrfx_power_clock_irq_handler, 0, 0,
-	isr0, isr1, isr2,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	rtc_nrf_isr
-};
-#else
-vth __irq_vector_table _irq_vector_table[] = {
-	0, 0, 0, 0, 0, nrfx_power_clock_irq_handler, 0, 0,
-	isr0, isr1, isr2,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	rtc_nrf_isr
-};
+void rtc_nrf_isr(void);
+#define POWER_CLOCK_IRQ_NUM	CLOCK_POWER_IRQn
+#define TIMER_IRQ_HANDLER	rtc_nrf_isr
+#define TIMER_IRQ_NUM	RTC1_IRQn
+#elif defined(CONFIG_SOC_SERIES_NRF54LX)
+void nrfx_grtc_irq_handler(void);
+#define POWER_CLOCK_IRQ_NUM	CLOCK_POWER_IRQn
+#if defined(CONFIG_NRF_GRTC_TIMER)
+#define TIMER_IRQ_HANDLER	nrfx_grtc_irq_handler
+#define TIMER_IRQ_NUM	GRTC_0_IRQn
 #endif
 #endif
+
+#define IRQ_VECTOR_TABLE_SIZE (MAX(POWER_CLOCK_IRQ_NUM, MAX(TIMER_IRQ_NUM, _ISR_OFFSET +2)) + 1)
+
+vth __irq_vector_table _irq_vector_table[IRQ_VECTOR_TABLE_SIZE] = {
+	[POWER_CLOCK_IRQ_NUM] = nrfx_power_clock_irq_handler,
+	[TIMER_IRQ_NUM] = TIMER_IRQ_HANDLER,
+	[_ISR_OFFSET] = isr0,
+	[_ISR_OFFSET + 1] = isr1,
+	[_ISR_OFFSET + 2] = isr2,
+};
 #elif defined(CONFIG_SOC_SERIES_CC13X2_CC26X2) || defined(CONFIG_SOC_SERIES_CC13X2X7_CC26X2X7)
 /* TI CC13x2/CC26x2 based platforms also employ a Hardware RTC peripheral
  * to implement the Kernel system timer, instead of the ARM Cortex-M
