@@ -65,6 +65,31 @@ nrfx_uart_num = 3
 rsource "Kconfig.nrfx_uart_instance"
 endif
 
+if HAS_HW_NRF_UARTE00
+nrfx_uart_num = 00
+rsource "Kconfig.nrfx_uart_instance"
+endif
+
+if HAS_HW_NRF_UARTE20
+nrfx_uart_num = 20
+rsource "Kconfig.nrfx_uart_instance"
+endif
+
+if HAS_HW_NRF_UARTE21
+nrfx_uart_num = 21
+rsource "Kconfig.nrfx_uart_instance"
+endif
+
+if HAS_HW_NRF_UARTE22
+nrfx_uart_num = 22
+rsource "Kconfig.nrfx_uart_instance"
+endif
+
+if HAS_HW_NRF_UARTE30
+nrfx_uart_num = 30
+rsource "Kconfig.nrfx_uart_instance"
+endif
+
 config NRFX_TIMER0
 	default y
 	depends on UART_0_NRF_HW_ASYNC_TIMER = 0 \
